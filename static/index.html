@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYC Intelligence | Neural OCR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #020617;
+            --surface: rgba(15, 23, 42, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --primary: #6366f1;
+            --secondary: #22d3ee;
+            --success: #10b981;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1rem;
+            padding: 1rem;
+            flex-grow: 1;
+            height: calc(100vh - 70px);
+        }
+
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Left Panel (Source) */
+        .source-panel {
+            gap: 1.5rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 0.75rem;
+            padding: 2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .upload-zone:hover { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+
+        #preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            background: #000;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Right Panel (Results) */
+        .results-container {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 1rem;
+            overflow: hidden; /* Prevent parent from scrolling */
+        }
+
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .viewer-header h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .viewer {
+            background: #020617;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            overflow-y: auto; /* Enable vertical scroll */
+            overflow-x: hidden;
+            flex-grow: 1;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 0; /* Critical for flex scrolling */
+        }
+
+        /* Custom Scrollbar Styling */
+        .viewer::-webkit-scrollbar {
+            width: 8px;
+        }
+        .viewer::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .viewer::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+            border: 2px solid #020617;
+        }
+        .viewer::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        .raw-color { color: #64748b; }
+
+        /* Status */
+        .status-bar { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-dim); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .copy-btn {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--primary);
+            color: #fff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.4rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>KYC Intelligence</h1>
+        <div class="status-bar">
+            <div class="spinner" id="loader"></div>
+            <div class="dot" id="status-dot"></div>
+            <span id="status-text">Engine Online</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- LEFT: SOURCE SIDEBAR -->
+        <section class="glass-card source-panel">
+            <div class="viewer-header"><h3>Source Document</h3></div>
+            <div class="upload-zone" id="drop-zone">
+                <p style="font-size: 0.9rem;">Click or Drag Image</p>
+                <input type="file" id="file-input" hidden accept="image/*">
+            </div>
+            <img id="preview" alt="Preview">
+            <button class="btn-primary" id="process-btn" disabled>Extract Data</button>
+            <p style="font-size: 0.75rem; color: var(--text-dim); text-align: center;">Supported: ISR-1 KYC Forms</p>
+        </section>
+
+        <!-- RIGHT: STACKED RESULTS -->
+        <div class="results-container">
+            <!-- TOP: STRUCTURED -->
+            <section class="glass-card">
+                <div class="viewer-header">
+                    <h3>Smart Structured Data</h3>
+                    <button class="copy-btn" onclick="copyJSON('json-output')">Copy JSON</button>
+                </div>
+                <pre class="viewer" id="json-output">// Waiting for input...</pre>
+            </section>
+
+            <!-- BOTTOM: RAW -->
+            <section class="glass-card">
+                <div class="viewer-header">
+                    <h3>Raw OCR Detections</h3>
+                    <button class="copy-btn" onclick="copyJSON('raw-output')">Copy Raw</button>
+                </div>
+                <pre class="viewer raw-color" id="raw-output">// Raw blocks will appear here...</pre>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const processBtn = document.getElementById('process-btn');
+        const preview = document.getElementById('preview');
+        const jsonOutput = document.getElementById('json-output');
+        const rawOutput = document.getElementById('raw-output');
+        const loader = document.getElementById('loader');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        let selectedFile = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                selectedFile = files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    processBtn.disabled = false;
+                    statusText.innerText = `Selected: ${selectedFile.name}`;
+                };
+                reader.readAsDataURL(selectedFile);
+            }
+        }
+
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            processBtn.disabled = true;
+            loader.style.display = 'block';
+            statusDot.style.display = 'none';
+            statusText.innerText = 'Extracting...';
+
+            try {
+                const response = await fetch('/extract', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed');
+
+                jsonOutput.innerText = JSON.stringify(data.structured, null, 2);
+                rawOutput.innerText = JSON.stringify(data.raw, null, 2);
+                statusText.innerText = 'Extraction Complete';
+            } catch (error) {
+                statusText.innerText = `Error: ${error.message}`;
+                jsonOutput.innerText = '// Error during extraction';
+            } finally {
+                loader.style.display = 'none';
+                statusDot.style.display = 'block';
+                processBtn.disabled = false;
+            }
+        });
+
+        function copyJSON(id) {
+            navigator.clipboard.writeText(document.getElementById(id).innerText);
+            alert('Copied to clipboard');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Core AI Engine
+paddlepaddle>=2.6.0
+paddleocr>=2.7.0
+
+# Image Processing
+opencv-python>=4.8.0
+numpy>=1.23.0
+
+# API & Web Server
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6

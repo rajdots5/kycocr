@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Project Specific
+uploads/
+server.log
+raw_ocr_blocks.json
+output.json
+
+# System
+.DS_Store
