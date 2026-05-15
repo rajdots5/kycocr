@@ -4,6 +4,7 @@ import re
 import cv2
 import numpy as np
 import logging
+import fitz  # PyMuPDF for PDF support
 from paddleocr import PaddleOCR
 
 # Configure logging
@@ -84,16 +85,36 @@ class KYCService:
 
         return True, "Success"
 
+    def convert_pdf_to_image(self, pdf_path):
+        """
+        Converts the first page of a PDF into a numpy image.
+        """
+        logger.info(f"Converting PDF to image: {pdf_path}")
+        doc = fitz.open(pdf_path)
+        page = doc.load_page(0)  # Extract first page
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x scale for high quality
+        img_data = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
+        
+        # Convert RGB to BGR for OpenCV
+        img_bgr = cv2.cvtColor(img_data, cv2.COLOR_RGB2BGR)
+        doc.close()
+        return img_bgr
+
     def extract_raw_blocks(self, image_path):
         """
         Runs the OCR engine on the image and returns a list of text blocks with coordinates.
+        Supports PDF by auto-converting first page.
         """
         logger.info(f"Processing extraction for: {image_path}")
         
-        # 1. Pre-process (Downscale)
-        img = self.resize_image(image_path, max_size=1500)
+        # 1. Pre-process (Handle PDF or Image)
+        if image_path.lower().endswith('.pdf'):
+            img = self.convert_pdf_to_image(image_path)
+        else:
+            img = self.resize_image(image_path, max_size=1500)
+            
         if img is None:
-            raise ValueError("Could not load image file.")
+            raise ValueError("Could not load file.")
 
         # 2. Run PaddleOCR Inference
         result = self.ocr.predict(img)

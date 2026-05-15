@@ -47,10 +47,16 @@ async def extract_kyc(file: UploadFile = File(...)):
     """
     logger.info(f"Received upload request: {file.filename}")
 
-    # Validate file type
-    if not file.content_type.startswith("image/"):
-        logger.warning(f"Rejected non-image file: {file.content_type}")
-        raise HTTPException(status_code=400, detail="File must be an image (JPEG/PNG)")
+    # Validate file type (Allow images and PDF)
+    content_type = file.content_type.lower()
+    filename = file.filename.lower()
+    
+    is_image = "image" in content_type or filename.endswith(('.jpg', '.jpeg', '.png'))
+    is_pdf = "pdf" in content_type or filename.endswith('.pdf')
+
+    if not (is_image or is_pdf):
+        logger.warning(f"Rejected invalid file: {filename} ({content_type})")
+        raise HTTPException(status_code=400, detail="Please upload a valid Image or PDF file.")
 
     # Generate a unique filename to avoid collisions
     file_id = str(uuid.uuid4())

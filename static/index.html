@@ -193,10 +193,14 @@
         <section class="glass-card source-panel">
             <div class="viewer-header"><h3>Source Document</h3></div>
             <div class="upload-zone" id="drop-zone">
-                <p style="font-size: 0.9rem;">Click or Drag Image</p>
-                <input type="file" id="file-input" hidden accept="image/*">
+                <p style="font-size: 0.75rem; color: var(--text-dim);">Supported: ISR-1 (JPG, PNG, PDF)</p>
+                <input type="file" id="file-input" hidden accept="image/*,.pdf">
             </div>
             <img id="preview" alt="Preview">
+            <div id="pdf-icon" style="display:none; text-align:center; padding: 2rem; color: var(--secondary);">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <p style="margin-top:0.5rem; font-size:0.8rem;">PDF Document Ready</p>
+            </div>
             <button class="btn-primary" id="process-btn" disabled>Extract Data</button>
             <p style="font-size: 0.75rem; color: var(--text-dim); text-align: center;">Supported: ISR-1 KYC Forms</p>
         </section>
@@ -228,6 +232,7 @@
         const fileInput = document.getElementById('file-input');
         const processBtn = document.getElementById('process-btn');
         const preview = document.getElementById('preview');
+        const pdfIcon = document.getElementById('pdf-icon');
         const jsonOutput = document.getElementById('json-output');
         const rawOutput = document.getElementById('raw-output');
         const loader = document.getElementById('loader');
@@ -245,14 +250,22 @@
         function handleFiles(files) {
             if (files.length > 0) {
                 selectedFile = files[0];
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    processBtn.disabled = false;
-                    statusText.innerText = `Selected: ${selectedFile.name}`;
-                };
-                reader.readAsDataURL(selectedFile);
+                const isPDF = selectedFile.type === 'application/pdf';
+                
+                if (isPDF) {
+                    preview.style.display = 'none';
+                    pdfIcon.style.display = 'block';
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                        pdfIcon.style.display = 'none';
+                    };
+                    reader.readAsDataURL(selectedFile);
+                }
+                processBtn.disabled = false;
+                statusText.innerText = `Selected: ${selectedFile.name}`;
             }
         }
 
